@@ -7,6 +7,12 @@
 # you're doing.
 Vagrant.configure(2) do |config|
   config.vm.box = "chef/centos-7.0"
-  config.vm.network :forwarded_port, guest: 80, host: 8080
+  config.vm.network :forwarded_port, guest: 80, host: 8000
   config.vm.provision "shell", path: "postinstall.sh"
+  config.vm.synced_folder "mrepo/", "/var/mrepo"
+
+  if Vagrant.has_plugin?("vagrant-vbguest")
+      config.vbguest.auto_update = false
+  end
+
 end

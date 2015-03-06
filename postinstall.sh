@@ -26,6 +26,7 @@ release=7.0-1406
 cat << EOL > /etc/mrepo.conf.d/${centos7_iso::-4}.conf
 [CentOS-$release]
 name = CentOS Minimal \$release (\$arch)
+metadata = repomd repoview
 release = $release
 metadata = yum
 iso = $centos7_iso
@@ -35,11 +36,14 @@ release=6.6
 cat << EOL > /etc/mrepo.conf.d/${centos6_iso::-4}.conf
 [CentOS-$release]
 name = CentOS Minimal \$release (\$arch)
+metadata = repomd repoview
 release = $release
 metadata = yum
 iso = $centos6_iso
 EOL
 mrepo -gvv
+cd /var/www/mrepo
+for i in *; do if [ -d $i ]; then createrepo $i; fi done
 /bin/systemctl restart  httpd.service
 
 # http://localhost:8080/mrepo/

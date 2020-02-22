@@ -13,7 +13,7 @@ set -o pipefail
 set -o errexit
 set -o xtrace
 
-curl -fsSL http://bit.ly/pkgInstall | PKG="pip" bash
+curl -fsSL http://bit.ly/install_pkg | PKG="pip" bash
 PKG_MANAGER=$(command -v dnf || command -v yum)
 sudo -H -E "$PKG_MANAGER" -q -y install deltarpm git createrepo rsync httpd hardlink
 sudo systemctl enable --now httpd

@@ -13,7 +13,7 @@ $no_proxy = ENV['NO_PROXY'] || ENV['no_proxy'] || "127.0.0.1,localhost"
 (1..254).each do |i|
   $no_proxy += ",192.168.121.#{i}"
 end
-$no_proxy += ",10.0.2.15"
+$no_proxy += ",10.0.2.15,10.10.17.4"
 $socks_proxy = ENV['socks_proxy'] || ENV['SOCKS_PROXY'] || ""
 
 Vagrant.configure(2) do |config|
@@ -21,13 +21,17 @@ Vagrant.configure(2) do |config|
   config.vm.provider :virtualbox
 
   config.vm.box = "centos/7"
-  config.vm.box_version = "1905.01"
-  config.vm.synced_folder './', '/vagrant'
+  config.vm.box_version = "1905.1"
+  config.vm.synced_folder './', '/vagrant', type: "nfs"
+
+  # NOTE: A private network set up is required by NFS. This is due
+  # to a limitation of VirtualBox's built-in networking.
+  config.vm.network "private_network", ip: "10.10.17.4"
 
   [:virtualbox, :libvirt].each do |provider|
   config.vm.provider provider do |p|
-      p.cpus = 4
-      p.memory = 8192
+      p.cpus = 2
+      p.memory = 2048
     end
   end
 
@@ -36,7 +40,7 @@ Vagrant.configure(2) do |config|
     unless File.exist?($volume_file)
       v.customize ['createmedium', 'disk', '--filename', $volume_file, '--size', 100]
     end
-    v.customize ['storageattach', :id, '--storagectl', 'IDE Controller', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', $volume_file]
+    v.customize ['storageattach', :id, '--storagectl', 'IDE', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', $volume_file]
   end
 
   config.vm.provider :libvirt do |v|

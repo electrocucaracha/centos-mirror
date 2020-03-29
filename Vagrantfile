@@ -28,17 +28,29 @@ Vagrant.configure(2) do |config|
   # to a limitation of VirtualBox's built-in networking.
   config.vm.network "private_network", ip: "10.10.17.4"
 
+  # Raspberry Pi 4 configuration
   [:virtualbox, :libvirt].each do |provider|
   config.vm.provider provider do |p|
-      p.cpus = 2
-      p.memory = 2048
+      p.cpus = 4
+      p.memory = 4096
     end
   end
+
+  # External volume setup
+  config.vm.provision 'shell', privileged: false, inline: <<-SHELL
+    sudo sfdisk /dev/sdb --no-reread << EOF
+;
+EOF
+    sudo mkfs -t ext4 /dev/sdb1
+    sudo mkdir -p /var/mrepo
+    sudo mount /dev/sdb1 /var/mrepo
+    echo "/dev/sdb1 /var/mrepo           ext4    errors=remount-ro,noatime,barrier=0 0       1" | sudo tee --append /etc/fstab
+  SHELL
 
   $volume_file = "sda.vdi"
   config.vm.provider 'virtualbox' do |v, override|
     unless File.exist?($volume_file)
-      v.customize ['createmedium', 'disk', '--filename', $volume_file, '--size', 100]
+      v.customize ['createmedium', 'disk', '--filename', $volume_file, '--size', (15 * 1024)]
     end
     v.customize ['storageattach', :id, '--storagectl', 'IDE', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', $volume_file]
   end
@@ -47,7 +59,7 @@ Vagrant.configure(2) do |config|
     v.cpu_mode = 'host-passthrough'
     v.random_hostname = true
     v.management_network_address = "192.168.121.0/24"
-    v.storage :file, :bus => 'sata', :device => 'sda', :size => 100
+    v.storage :file, :bus => 'sata', :device => 'sda', :size => 15
   end
 
   if ENV['http_proxy'] != nil and ENV['https_proxy'] != nil

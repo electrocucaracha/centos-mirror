@@ -15,7 +15,7 @@ set -o xtrace
 
 # Install dependencies
 pkgs=""
-for pkg in docker pip createrepo; do
+for pkg in docker pip createrepo docker-compose fuseiso; do
     if ! command -v $pkg; then
         pkgs+=" $pkg"
     fi
@@ -68,34 +68,23 @@ EOL
     fi
 done < ~/mirror_unvalidated_url.lst
 
-if ! docker images mrepo --format "{{json . }}"; then
-    sudo docker build --no-cache -t mrepo:latest .
+docker_compose_cmd="sudo $(command -v docker-compose)"
+if ! sudo docker images | grep -q mrepo ; then
+    eval "$docker_compose_cmd build --compress --force-rm"
 fi
 
-# Mount CentOS 7 ISO
-mount_cmd=$(sudo docker run \
-    -v /etc/mrepo.conf:/etc/mrepo.conf \
-    -v /var/www/mrepo:/var/www/mrepo \
-    -v /etc/mrepo.conf.d/:/etc/mrepo.conf.d/ \
-    -v /var/mrepo:/var/mrepo --privileged mrepo -vvvv | grep "Execute: exec /bin/mount" | sed "s/Execute: exec //g")
+# Copy CentOS 7 RPM key
+mount_cmd=$($docker_compose_cmd run mrepo --remount | grep "Execute: exec /usr/bin/fuseiso" | sed "s/.*exec //g")
+echo "$mount_cmd"
 eval "sudo $mount_cmd"
 
-sudo docker run -d \
-    -v /etc/mrepo.conf:/etc/mrepo.conf \
-    -v /var/www/mrepo:/var/www/mrepo:rw \
-    -v /etc/mrepo.conf.d/:/etc/mrepo.conf.d/ \
-    -v /var/mrepo:/var/mrepo --privileged mrepo -ug -vvvv
-cd /var/www/mrepo
-for i in *; do
-    if [ -d "$i" ]; then
-        sudo createrepo "$i";
-    fi
-done
+pushd /var/www/mrepo/
+sudo cp "$(sudo find . -name RPM-GPG-KEY-CentOS-7 -print -quit)" .
+sudo createrepo .
+popd
 
-sudo docker run -d --restart=always \
-    -v /etc/mrepo/httpd/httpd.conf:/usr/local/apache2/conf/httpd.conf \
-    -v /etc/mrepo/httpd/httpd-default.conf:/usr/local/apache2/conf/extra/httpd-default.conf \
-    -v /var/www/mrepo:/var/www/mrepo -p 80:80 --name frontend httpd
+# Start mrepo and httpd services
+$docker_compose_cmd up --detach --no-build
 
-# sudo yum-config-manager --add-repo http://10.10.17.4/mrepo/centos7-x86_64/
-# sudo rpm --import http://10.10.17.4/mrepo/centos7-x86_64/disc1/RPM-GPG-KEY-CentOS-7
+# sudo yum-config-manager --add-repo http://10.10.17.4/mrepo/
+# sudo rpm --import http://10.10.17.4/mrepo/RPM-GPG-KEY-CentOS-7

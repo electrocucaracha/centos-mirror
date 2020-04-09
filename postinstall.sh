@@ -21,7 +21,7 @@ for pkg in docker pip createrepo docker-compose fuseiso; do
     fi
 done
 if [ -n "$pkgs" ]; then
-    curl -fsSL http://bit.ly/install_pkg | PKG=$pkgs PKG_MGR_DEBUG=true bash
+    curl -fsSL http://bit.ly/install_pkg | PKG=$pkgs PKG_DEBUG=true bash
 fi
 sudo sed -i "s|#!/usr/bin/python|#!$(command -v python2)|g" /usr/share/createrepo/genpkgmetadata.py
 sudo sed -i "s|#!/usr/bin/python|#!$(command -v python2)|g" /usr/share/createrepo/worker.py

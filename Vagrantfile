@@ -14,25 +14,19 @@ $no_proxy = ENV['NO_PROXY'] || ENV['no_proxy'] || "127.0.0.1,localhost"
   $no_proxy += ",192.168.121.#{i}"
 end
 $no_proxy += ",10.0.2.15,10.10.17.4"
-$socks_proxy = ENV['socks_proxy'] || ENV['SOCKS_PROXY'] || ""
 
-Vagrant.configure(2) do |config|
+Vagrant.configure("2") do |config|
   config.vm.provider :libvirt
   config.vm.provider :virtualbox
 
   config.vm.box = "centos/7"
-  config.vm.box_version = "1905.1"
-  config.vm.synced_folder './', '/vagrant', type: "nfs"
+  config.vm.synced_folder './', '/vagrant', type: "rsync",
+    rsync__args: ["--verbose", "--archive", "--delete", "-z"]
 
-  # NOTE: A private network set up is required by NFS. This is due
-  # to a limitation of VirtualBox's built-in networking.
-  config.vm.network "private_network", ip: "10.10.17.4"
-
-  # Raspberry Pi 4 configuration
   [:virtualbox, :libvirt].each do |provider|
   config.vm.provider provider do |p|
-      p.cpus = 4
-      p.memory = 4096
+      p.cpus = 1
+      p.memory = ENV['MEMORY'] || 512
     end
   end
 
